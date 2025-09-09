@@ -1,16 +1,18 @@
+/** @import { Context, Visitor, Visitors } from './types.js' */
+
 /**
- * @template {{type: string}} T
+ * @template {{ type: string }} T
  * @template {Record<string, any> | null} U
  * @param {T} node
  * @param {U} state
- * @param {import('./types').Visitors<T, U>} visitors
+ * @param {Visitors<T, U>} visitors
  */
 export function walk(node, state, visitors) {
 	const universal = visitors._;
 
 	let stopped = false;
 
-	/** @type {import('./types').Visitor<T, U, T>} _ */
+	/** @type {Visitor<T, U, T>} _ */
 	function default_visitor(_, { next, state }) {
 		next(state);
 	}
@@ -32,7 +34,7 @@ export function walk(node, state, visitors) {
 		/** @type {Record<string, any>} */
 		const mutations = {};
 
-		/** @type {import('./types').Context<T, U>} */
+		/** @type {Context<T, U>} */
 		const context = {
 			path,
 			state,
@@ -46,15 +48,22 @@ export function walk(node, state, visitors) {
 						if (Array.isArray(child_node)) {
 							/** @type {Record<number, T>} */
 							const array_mutations = {};
+							const len = child_node.length;
 
-							child_node.forEach((node, i) => {
+							let mutated = false;
+
+							for (let i = 0; i < len; i++) {
+								const node = child_node[i];
 								if (node && typeof node === 'object') {
 									const result = visit(node, path, next_state);
-									if (result) array_mutations[i] = result;
+									if (result) {
+										array_mutations[i] = result;
+										mutated = true;
+									}
 								}
-							});
+							}
 
-							if (Object.keys(array_mutations).length > 0) {
+							if (mutated) {
 								mutations[key] = child_node.map(
 									(node, i) => array_mutations[i] ?? node
 								);
@@ -90,7 +99,7 @@ export function walk(node, state, visitors) {
 			}
 		};
 
-		let visitor = /** @type {import('./types').Visitor<T, U, T>} */ (
+		let visitor = /** @type {Visitor<T, U, T>} */ (
 			visitors[/** @type {T['type']} */ (node.type)] ?? default_visitor
 		);
 

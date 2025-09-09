@@ -1,5 +1,11 @@
 # zimmerframe changelog
 
+## 1.1.4
+
+### Patch Changes
+
+- e8b889e: chore: speed up array traversal
+
 ## 1.1.3
 
 ### Patch Changes

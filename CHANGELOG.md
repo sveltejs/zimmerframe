@@ -1,5 +1,9 @@
 # zimmerframe changelog
 
+## 1.1.3
+
+- Update `pkg.repository`
+
 ## 1.1.2
 
 - Keep non-enumerable properties non-enumerable ([#20](https://github.com/Rich-Harris/zimmerframe/pull/20))

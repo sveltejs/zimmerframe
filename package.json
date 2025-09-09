@@ -19,11 +19,14 @@
 		"types"
 	],
 	"devDependencies": {
+		"@changesets/cli": "^2.29.7",
 		"dts-buddy": "^0.1.13",
 		"typescript": "^5.1.6",
 		"vitest": "^0.34.2"
 	},
 	"scripts": {
+		"changeset:version": "changeset version",
+		"changeset:publish": "changeset publish",
 		"prepublishOnly": "dts-buddy -m zimmerframe:src/index.d.ts",
 		"check": "tsc",
 		"test": "vitest --run",

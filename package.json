@@ -1,7 +1,7 @@
 {
 	"name": "zimmerframe",
 	"description": "A tool for walking ASTs",
-	"version": "1.1.2",
+	"version": "1.1.3",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/sveltejs/zimmerframe"

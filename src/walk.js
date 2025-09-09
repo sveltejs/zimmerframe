@@ -48,20 +48,22 @@ export function walk(node, state, visitors) {
 						if (Array.isArray(child_node)) {
 							/** @type {Record<number, T>} */
 							const array_mutations = {};
-							let mutated = 0;
 							const len = child_node.length;
+
+							let mutated = false;
+
 							for (let i = 0; i < len; i++) {
 								const node = child_node[i];
 								if (node && typeof node === 'object') {
 									const result = visit(node, path, next_state);
 									if (result) {
 										array_mutations[i] = result;
-										mutated++;
+										mutated = true;
 									}
 								}
 							}
 
-							if (mutated > 0) {
+							if (mutated) {
 								mutations[key] = child_node.map(
 									(node, i) => array_mutations[i] ?? node
 								);

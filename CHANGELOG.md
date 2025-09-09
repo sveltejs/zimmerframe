@@ -1,5 +1,11 @@
 # zimmerframe changelog
 
+## 1.1.3
+
+### Patch Changes
+
+- 9c17204: fix: update `pkg.repository`
+
 ## 1.1.2
 
 - Keep non-enumerable properties non-enumerable ([#20](https://github.com/Rich-Harris/zimmerframe/pull/20))

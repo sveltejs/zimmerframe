@@ -1,4 +1,117 @@
-/** @import { Context, Visitor, Visitors } from './types.js' */
+/** @import { Context, ReadonlyContext, Visitor, ReadonlyVisitor, Visitors, ReadonlyVisitors } from './types.js' */
+
+/**
+ * Optimized read-only AST walker. Same traversal semantics as `walk()`, but
+ * strips all mutation tracking — no `mutations` object, no `apply_mutations`,
+ * no return values from visitors. Use this for analysis passes that only
+ * inspect the tree without transforming it.
+ *
+ * @template {{ type: string }} T
+ * @template {Record<string, any> | null} U
+ * @param {T} node
+ * @param {U} state
+ * @param {ReadonlyVisitors<T, U>} visitors
+ * @returns {void}
+ */
+export function walk_readonly(node, state, visitors) {
+	const universal = visitors._;
+
+	/** @type {T[]} */
+	const path = [];
+
+	let stopped = false;
+
+	/**
+	 * @param {T} node
+	 * @param {U} state
+	 */
+	function visit(node, state) {
+		if (stopped) return;
+		if (!node.type) return;
+
+		/**
+		 * @param {U} next_state
+		 */
+		function next(next_state = state) {
+			path.push(node);
+			for (const key in node) {
+				if (key === 'type') continue;
+
+				const child = node[key];
+				if (child && typeof child === 'object') {
+					if (Array.isArray(child)) {
+						for (let i = 0; i < child.length; i++) {
+							const item = child[i];
+							if (item && typeof item === 'object') {
+								visit(item, next_state);
+								if (stopped) break;
+							}
+						}
+					} else if (/** @type {any} */ (child).type) {
+						visit(/** @type {T} */ (child), next_state);
+					}
+				}
+				if (stopped) break;
+			}
+			path.pop();
+		}
+
+		const visitor = /** @type {ReadonlyVisitor<T, U, T> | undefined} */ (
+			visitors[/** @type {T['type']} */ (node.type)]
+		);
+
+		if (universal) {
+			/** @type {ReadonlyContext<T, U>} */
+			const context = {
+				path,
+				state,
+				next: (next_state = state) => {
+					state = next_state;
+					if (visitor) {
+						// Swap next to raw child-traversal so the specialized
+						// visitor doesn't re-enter the universal dispatcher
+						context.next = next;
+						context.state = next_state;
+						visitor(node, context);
+					} else {
+						next(next_state);
+					}
+				},
+				stop: () => {
+					stopped = true;
+				},
+				visit: (next_node, next_state = state) => {
+					path.push(node);
+					visit(next_node, next_state);
+					path.pop();
+				}
+			};
+
+			universal(node, context);
+		} else if (visitor) {
+			/** @type {ReadonlyContext<T, U>} */
+			const context = {
+				path,
+				state,
+				next,
+				stop: () => {
+					stopped = true;
+				},
+				visit: (next_node, next_state = state) => {
+					path.push(node);
+					visit(next_node, next_state);
+					path.pop();
+				}
+			};
+
+			visitor(node, context);
+		} else {
+			next(state);
+		}
+	}
+
+	visit(node, state);
+}
 
 /**
  * @template {{ type: string }} T

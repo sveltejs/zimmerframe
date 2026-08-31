@@ -12,11 +12,6 @@ export function walk(node, state, visitors) {
 
 	let stopped = false;
 
-	/** @type {Visitor<T, U, T>} _ */
-	function default_visitor(_, { next, state }) {
-		next(state);
-	}
-
 	/**
 	 * @param {T} node
 	 * @param {T[]} path
@@ -31,76 +26,69 @@ export function walk(node, state, visitors) {
 		/** @type {T | void} */
 		let result;
 
-		/** @type {Record<string, any>} */
-		const mutations = {};
+		/** @type {Record<string, any> | null} lazily initialized for performance reasons */
+		let mutations = null;
 
-		/** @type {Context<T, U>} */
-		const context = {
-			path,
-			state,
-			next: (next_state = state) => {
-				path.push(node);
-				for (const key in node) {
-					if (key === 'type') continue;
+		const next = (next_state = state) => {
+			path.push(node);
+			for (const key in node) {
+				if (key === 'type') continue;
 
-					const child_node = node[key];
-					if (child_node && typeof child_node === 'object') {
-						if (Array.isArray(child_node)) {
-							/** @type {Record<number, T>} */
-							const array_mutations = {};
-							const len = child_node.length;
+				const child_node = node[key];
+				if (child_node && typeof child_node === 'object') {
+					if (Array.isArray(child_node)) {
+						/** @type {Record<number, T> | null} lazily initialized for performance reasons */
+						let array_mutations = null;
+						const len = child_node.length;
 
-							let mutated = false;
-
-							for (let i = 0; i < len; i++) {
-								const node = child_node[i];
-								if (node && typeof node === 'object') {
-									const result = visit(node, path, next_state);
-									if (result) {
-										array_mutations[i] = result;
-										mutated = true;
-									}
+						for (let i = 0; i < len; i++) {
+							const node = child_node[i];
+							if (node && typeof node === 'object') {
+								const result = visit(node, path, next_state);
+								if (result) {
+									(array_mutations ??= {})[i] = result;
 								}
 							}
+						}
 
-							if (mutated) {
-								mutations[key] = child_node.map(
-									(node, i) => array_mutations[i] ?? node
-								);
-							}
-						} else {
-							const result = visit(
-								/** @type {T} */ (child_node),
-								path,
-								next_state
+						if (array_mutations) {
+							(mutations ??= {})[key] = child_node.map(
+								(node, i) => array_mutations[i] ?? node
 							);
+						}
+					} else {
+						const result = visit(
+							/** @type {T} */ (child_node),
+							path,
+							next_state
+						);
 
-							// @ts-ignore
-							if (result) {
-								mutations[key] = result;
-							}
+						// @ts-ignore
+						if (result) {
+							(mutations ??= {})[key] = result;
 						}
 					}
 				}
-				path.pop();
+			}
+			path.pop();
 
-				if (Object.keys(mutations).length > 0) {
-					return apply_mutations(node, mutations);
-				}
-			},
-			stop: () => {
-				stopped = true;
-			},
-			visit: (next_node, next_state = state) => {
-				path.push(node);
-				const result = visit(next_node, path, next_state) ?? next_node;
-				path.pop();
-				return result;
+			if (mutations) {
+				return apply_mutations(node, mutations);
 			}
 		};
+		const stop = () => {
+			stopped = true;
+		};
+		/** @type {Context<T, U>['visit']} */
+		const visit_node = (next_node, next_state = state) => {
+			path.push(node);
+			const result = visit(next_node, path, next_state) ?? next_node;
+			path.pop();
+			return result;
+		};
 
-		let visitor = /** @type {Visitor<T, U, T>} */ (
-			visitors[/** @type {T['type']} */ (node.type)] ?? default_visitor
+		const visitor = /** @type {Visitor<T, U, T> | undefined} */ (
+			visitors[/** @type {T['type']} */ (node.type)]
 		);
 
 		if (universal) {
@@ -108,18 +96,27 @@ export function walk(node, state, visitors) {
 			let inner_result;
 
 			result = universal(node, {
-				...context,
+				// Don't spread for performance reasons
+				path,
+				state,
 				/** @param {U} next_state */
 				next: (next_state = state) => {
 					state = next_state; // make it the default for subsequent specialised visitors
 
-					inner_result = visitor(node, {
-						...context,
-						state: next_state
-					});
+					inner_result = visitor
+						? visitor(node, {
+								path,
+								state: next_state,
+								next,
+								stop,
+								visit: visit_node
+							})
+						: next(next_state);
 
 					return inner_result;
-				}
+				},
+				stop,
+				visit: visit_node
 			});
 
 			// @ts-expect-error TypeScript doesn't understand that `context.next(...)` is called immediately
@@ -127,13 +124,13 @@ export function walk(node, state, visitors) {
 				result = inner_result;
 			}
 		} else {
-			result = visitor(node, context);
+			result = visitor
+				? visitor(node, { path, state, next, stop, visit: visit_node })
+				: next();
 		}
 
-		if (!result) {
-			if (Object.keys(mutations).length > 0) {
-				result = apply_mutations(node, mutations);
-			}
+		if (!result && mutations) {
+			result = apply_mutations(node, mutations);
 		}
 
 		if (result) {

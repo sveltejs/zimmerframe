@@ -9,5 +9,5 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["./src", "./test", "./vitest.config.js"]
+	"include": ["./benchmark", "./src", "./test", "./vitest.config.js"]
 }

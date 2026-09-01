@@ -25,6 +25,7 @@
 		"vitest": "^3.2.4"
 	},
 	"scripts": {
+		"bench": "node benchmark/index.js",
 		"changeset:version": "changeset version",
 		"changeset:publish": "changeset publish",
 		"prepublishOnly": "dts-buddy -m zimmerframe:src/index.d.ts",

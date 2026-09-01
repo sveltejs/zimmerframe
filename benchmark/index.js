@@ -7,13 +7,6 @@ let sink = 0;
 
 const benchmarks = [
 	{
-		name: 'default read-only',
-		run() {
-			const result = walk(tree, null, {});
-			sink ^= result.children.length;
-		}
-	},
-	{
 		name: 'specialized read-only',
 		run() {
 			const result = walk(tree, null, {
@@ -126,6 +119,7 @@ function calibrate(run) {
  * @param {number} depth
  * @param {number} width
  * @param {{ value: number }} [counter]
+ * @returns {{ type: string } & Record<string, any>}
  */
 function create_tree(depth, width, counter = { value: 0 }) {
 	if (depth === 0) {
@@ -142,12 +136,19 @@ function create_tree(depth, width, counter = { value: 0 }) {
 	};
 }
 
-/** @param {ReturnType<typeof create_tree>} node */
+/**
+ * @param {ReturnType<typeof create_tree>} node
+ * @returns {number}
+ */
 function count_nodes(node) {
 	return (
 		1 +
 		('children' in node
-			? node.children.reduce((total, child) => total + count_nodes(child), 0)
+			? node.children.reduce(
+					(/** @type {number} */ total, /** @type {any} */ child) =>
+						total + count_nodes(child),
+					0
+				)
 			: 0)
 	);
 }

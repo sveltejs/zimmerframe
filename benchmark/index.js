@@ -7,13 +7,6 @@ let sink = 0;
 
 const benchmarks = [
 	{
-		name: 'default read-only',
-		run() {
-			const result = walk(tree, null, {});
-			sink ^= result.children.length;
-		}
-	},
-	{
 		name: 'specialized read-only',
 		run() {
 			const result = walk(tree, null, {
@@ -155,7 +148,7 @@ function count_nodes(node) {
 					(/** @type {number} */ total, /** @type {any} */ child) =>
 						total + count_nodes(child),
 					0
-			  )
+				)
 			: 0)
 	);
 }

@@ -28,7 +28,13 @@ export function walk(node, state, visitors) {
 
 		path.push(node);
 		for (const key in node) {
-			if (key === 'type') continue;
+			if (
+				key === 'type' ||
+				// avoid manipulating the prototype
+				key === '__proto__'
+			) {
+				continue;
+			}
 
 			const child_node = node[key];
 			if (child_node && typeof child_node === 'object') {
@@ -124,7 +130,7 @@ export function walk(node, state, visitors) {
 								next,
 								stop,
 								visit: visit_node
-						  })
+							})
 						: next(next_state);
 
 					return inner_result;

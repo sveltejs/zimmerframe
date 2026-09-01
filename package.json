@@ -10,7 +10,8 @@
 	"exports": {
 		".": {
 			"types": "./types/index.d.ts",
-			"import": "./src/walk.js"
+			"import": "./src/walk.js",
+			"default": "./src/walk.js"
 		}
 	},
 	"types": "./types/index.d.ts",

@@ -133,6 +133,8 @@ Each visitor receives a second argument, `context`, which is an object with the 
 
 ASTs are regarded as immutable. If you return a transformed node from a visitor, then all parents of the node will be replaced with clones, but unchanged subtrees will reuse the existing nodes.
 
+Clones are created with object spread, so a clone has the node's own enumerable properties only. Anything else belongs in `state` or a `WeakMap` keyed by node.
+
 For example in this case, no transformation takes place, meaning that the returned value is identical to the original AST:
 
 ```js

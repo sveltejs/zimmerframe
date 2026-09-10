@@ -153,29 +153,23 @@ test('returns undefined if there are no child transformations', () => {
 	expect(result).toBe(undefined);
 });
 
-test('keeps non-enumerable properties', () => {
+test('clones a parent once when a child is transformed via next()', () => {
 	/** @type {import('./types').TestNode} */
 	const tree = {
 		type: 'Root',
-		children: [
-			{
-				type: 'Root',
-				children: [{ type: 'A' }, { type: 'B' }]
-			},
-			{ type: 'B' }
-		]
+		children: [{ type: 'A' }, { type: 'B' }]
 	};
 
-	Object.defineProperty(tree.children[0], 'metadata', {
-		value: { foo: true },
-		enumerable: false
-	});
+	let from_next;
 
 	const transformed = walk(
 		/** @type {import('./types').TestNode} */ (tree),
 		null,
 		{
-			A() {
+			Root: (node, { next }) => {
+				from_next = next();
+			},
+			A: () => {
 				return {
 					type: 'TransformedA'
 				};
@@ -183,12 +177,13 @@ test('keeps non-enumerable properties', () => {
 		}
 	);
 
-	// @ts-ignore
-	const { metadata } = transformed.children[0];
-
-	expect(metadata).toEqual({
-		foo: true
+	expect(from_next).toEqual({
+		type: 'Root',
+		children: [{ type: 'TransformedA' }, { type: 'B' }]
 	});
+
+	// the clone returned from `next()` is reused rather than cloning the parent again
+	expect(transformed).toBe(from_next);
 });
 
 test('doesnt mutate tree with non-type objects', () => {

@@ -23,8 +23,8 @@ export function walk(node, state, visitors) {
 	 * @returns {T | undefined}
 	 */
 	function visit_children(node, path, state) {
-		/** @type {Record<string, any> | null} lazily initialized for performance reasons */
-		let mutations = null;
+		/** @type {T | undefined} lazily cloned on first mutation */
+		let clone;
 
 		path.push(node);
 		for (const key in node) {
@@ -54,23 +54,22 @@ export function walk(node, state, visitors) {
 					}
 
 					if (mutated_array) {
-						(mutations ??= {})[key] = mutated_array;
+						// @ts-ignore
+						(clone ??= { ...node })[key] = mutated_array;
 					}
 				} else {
 					const result = visit(/** @type {T} */ (child_node), path, state);
 
-					// @ts-ignore
 					if (result) {
-						(mutations ??= {})[key] = result;
+						// @ts-ignore
+						(clone ??= { ...node })[key] = result;
 					}
 				}
 			}
 		}
 		path.pop();
 
-		if (mutations) {
-			return apply_mutations(node, mutations);
-		}
+		return clone;
 	}
 
 	/**
@@ -164,27 +163,4 @@ export function walk(node, state, visitors) {
 	}
 
 	return visit(node, [], state) ?? node;
-}
-
-/**
- * @template {Record<string, any>} T
- * @param {T} node
- * @param {Record<string, any>} mutations
- * @returns {T}
- */
-function apply_mutations(node, mutations) {
-	/** @type {Record<string, any>} */
-	const obj = {};
-
-	const descriptors = Object.getOwnPropertyDescriptors(node);
-
-	for (const key in descriptors) {
-		Object.defineProperty(obj, key, descriptors[key]);
-	}
-
-	for (const key in mutations) {
-		obj[key] = mutations[key];
-	}
-
-	return /** @type {T} */ (obj);
 }
